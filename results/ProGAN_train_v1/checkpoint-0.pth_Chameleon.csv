@@ -1,0 +1,3 @@
+./results/ProGAN_train/checkpoint-0.pth model testing on...
+testset,accuracy,avg precision
+Chameleon,0.5648215726193677,0.42756761998521253
