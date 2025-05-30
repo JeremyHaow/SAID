@@ -16,9 +16,11 @@ def texture_crop(image, stride=224, window_size=224, metric='he', position='top'
     cropped_images = []
     images = []
 
-    for y in range(0, image.height - window_size + 1, stride):
-        for x in range(0, image.width - window_size + 1, stride):
-            cropped_images.append(image.crop((x, y, x + window_size, y + window_size)))
+    x, y = 0, 0 # Initialize x and y
+    for y_loop_var in range(0, image.height - window_size + 1, stride):
+        for x_loop_var in range(0, image.width - window_size + 1, stride):
+            cropped_images.append(image.crop((x_loop_var, y_loop_var, x_loop_var + window_size, y_loop_var + window_size)))
+            x, y = x_loop_var, y_loop_var # Update x and y with the last values from the loop
     
     if not drop:
         x = x + stride
