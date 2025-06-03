@@ -1,1 +1,0 @@
-删除了SRMConv，直接送入到resnet，然后在resnet中有跟SAFE一致的小波变换提取高频频带
