@@ -91,9 +91,8 @@ transform_before_test = transforms.Compose([
     transforms.ToTensor(),
     ]
 )
-#这里先保留resize,测试后跟用randomcrop做对比
+#这里删除了resize，crop输出就是256x256
 transform_train = transforms.Compose([
-    transforms.Resize([256, 256]),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]
 )
 
@@ -173,7 +172,7 @@ class TrainDataset(Dataset):
         image = transform_before(image)
 
         try:
-            x_minmin, x_maxmax, x_minmin1, x_maxmax1 = self.crop(image)
+            x_minmin, x_maxmax = self.crop(image)
         except:
             print(f'image error: {image_path}, c, h, w: {image.shape}')
             return self.__getitem__(random.randint(0, len(self.data_list) - 1))
@@ -181,13 +180,8 @@ class TrainDataset(Dataset):
         x_0 = transform_train(image)
         x_minmin = transform_train(x_minmin) 
         x_maxmax = transform_train(x_maxmax)
-
-        x_minmin1 = transform_train(x_minmin1) 
-        x_maxmax1 = transform_train(x_maxmax1)
         
-
-
-        return torch.stack([x_minmin, x_maxmax, x_minmin1, x_maxmax1, x_0], dim=0), torch.tensor(int(targets))
+        return torch.stack([x_minmin, x_maxmax, x_0], dim=0), torch.tensor(int(targets))
 
     
 
@@ -236,15 +230,11 @@ class TestDataset(Dataset):
 
         # x_max, x_min, x_max_min, x_minmin = self.dct(image)
 
-        x_minmin, x_maxmax, x_minmin1, x_maxmax1 = self.crop(image)
-
+        x_minmin, x_maxmax = self.crop(image)
 
         x_0 = transform_train(image)
         x_minmin = transform_train(x_minmin) 
         x_maxmax = transform_train(x_maxmax)
-
-        x_minmin1 = transform_train(x_minmin1) 
-        x_maxmax1 = transform_train(x_maxmax1)
         
-        return torch.stack([x_minmin, x_maxmax, x_minmin1, x_maxmax1, x_0], dim=0), torch.tensor(int(targets))
+        return torch.stack([x_minmin, x_maxmax, x_0], dim=0), torch.tensor(int(targets))
 

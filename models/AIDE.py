@@ -3,7 +3,7 @@ import torch.utils.model_zoo as model_zoo
 import torch
 import clip
 import open_clip
-from .WTConv import WTConv2d
+from torchvision import transforms
 from .resnet import ResNet, Bottleneck # 从resnet.py导入ResNet和Bottleneck
 
 class Mlp(nn.Module):
@@ -25,8 +25,7 @@ class Mlp(nn.Module):
 class AIDE_Model(nn.Module):
     def __init__(self, resnet_path, convnext_path):
         super(AIDE_Model, self).__init__()
-        self.wavelet_processor = WTConv2d(in_channels=3, out_channels=3, kernel_size=5, wt_levels=1, wt_type='db1')
-
+        
         # 使用从 resnet.py 导入的 ResNet 和 Bottleneck
         self.model_min = ResNet(Bottleneck, [3, 4, 6, 3])
         self.model_max = ResNet(Bottleneck, [3, 4, 6, 3])
@@ -84,19 +83,24 @@ class AIDE_Model(nn.Module):
         for param in self.openclip_convnext_xxl.parameters():
             param.requires_grad = False
 
+    def _preprocess_dwt(self, x, mode='symmetric', wave='bior1.3'):
+        '''
+        pip install pywavelets pytorch_wavelets
+        '''
+        from pytorch_wavelets import DWTForward, DWTInverse
+        DWT_filter = DWTForward(J=1, mode=mode, wave=wave).to(x.device)
+        Yl, Yh = DWT_filter(x)
+        return transforms.Resize([x.shape[-2], x.shape[-1]])(Yh[0][:, :, 2, :, :])
+
     def forward(self, x):
         b, t, c, h, w = x.shape # c 是输入图像的通道数
 
-        x_minmin = x[:, 0]
-        x_maxmax = x[:, 1]
-        x_minmin1 = x[:, 2]
-        x_maxmax1 = x[:, 3]
-        tokens = x[:, 4]
+        x_minmin = x[:, 0]  # 纹理丰富度最低的块
+        x_maxmax = x[:, 1]  # 纹理丰富度最高的块
+        tokens = x[:, 2]    # 原始图像
 
-        x_minmin = self.wavelet_processor(x_minmin)
-        x_maxmax = self.wavelet_processor(x_maxmax)
-        x_minmin1 = self.wavelet_processor(x_minmin1)
-        x_maxmax1 = self.wavelet_processor(x_maxmax1)
+        x_minmin = self._preprocess_dwt(x_minmin)
+        x_maxmax = self._preprocess_dwt(x_maxmax)
 
         with torch.no_grad():
             # 确保均值和标准差张量与输入图像的通道数 c 和设备匹配
@@ -124,26 +128,18 @@ class AIDE_Model(nn.Module):
                 dinov2_mean_reshaped = _dinov2_mean.mean().view(1, 1, 1, 1).expand(b, c, 1, 1)
                 dinov2_std_reshaped = _dinov2_std.mean().view(1, 1, 1, 1).expand(b, c, 1, 1)
 
-
             local_convnext_image_feats = self.openclip_convnext_xxl(
                 tokens * (dinov2_std_reshaped / clip_std_reshaped) + (dinov2_mean_reshaped - clip_mean_reshaped) / clip_std_reshaped
             )
-            # ConvNeXt XXL trunk 输出 (B, 3072, H_feat, W_feat), e.g., (B, 3072, 8, 8) for 256x256 input
-            # H_feat = H // 32, W_feat = W // 32
-            # 动态获取特征图大小，而不是硬编码为8x8
-            # convnext_output_spatial_dims = local_convnext_image_feats.shape[2:] 
-            # assert local_convnext_image_feats.size(1) == 3072 # 检查通道数
 
             local_convnext_image_feats = self.avgpool(local_convnext_image_feats).view(b, -1) # 使用批次大小 b
             x_0 = self.convnext_proj(local_convnext_image_feats)
 
         x_min = self.model_min(x_minmin)
         x_max = self.model_max(x_maxmax)
-        x_min1 = self.model_min(x_minmin1)
-        x_max1 = self.model_max(x_maxmax1)
-
-        # ResNet 输出应为 [B, 2048] (对于ResNet50，最后一个block.expansion是4，输出通道512*4=2048)
-        x_1 = (x_min + x_max + x_min1 + x_max1) / 4
+        
+        # 平均两个ResNet分支的输出
+        x_1 = (x_min + x_max) / 2
         
         x = torch.cat([x_0, x_1], dim=1)
         x = self.fc(x)

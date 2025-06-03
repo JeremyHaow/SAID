@@ -163,7 +163,7 @@ def threshold_texture_crop(image, stride=224, window_size=224, threshold=5, drop
 
 
 class crop_base_Rec_Module(nn.Module):
-    def __init__(self, window_size=128, stride=16, metric='ghe', drop=False):
+    def __init__(self, window_size=256, stride=128, metric='ghe', drop=False):
         super().__init__()
         self.window_size = window_size
         self.stride = stride
@@ -180,45 +180,34 @@ class crop_base_Rec_Module(nn.Module):
 
         image_pil = self.to_pil(image_tensor)
 
-        # Get top 2 texture images (highest scores)
+        # Get top 1 texture image (highest score)
         top_images_pil = texture_crop(
             image=image_pil,
             stride=self.stride,
             window_size=self.window_size,
             metric=self.metric,
             position='top',
-            n=2,
+            n=1,
             drop=self.drop
         )
 
-        # Get bottom 2 texture images (lowest scores)
-        # texture_crop with position='bottom' and n=2 returns [2nd_lowest, lowest]
-        # because the internal list `images` is sorted descending by score.
+        # Get bottom 1 texture image (lowest score)
         bottom_images_pil = texture_crop(
             image=image_pil,
             stride=self.stride,
             window_size=self.window_size,
             metric=self.metric,
             position='bottom',
-            n=2,
+            n=1,
             drop=self.drop
         )
 
         # Assign based on score:
-        # top_images_pil[0] is highest score
-        # top_images_pil[1] is second highest score
-        img_maxmax_pil = top_images_pil[0]
-        img_maxmax1_pil = top_images_pil[1]
-
-        # bottom_images_pil[0] is second lowest score
-        # bottom_images_pil[1] is lowest score
-        img_minmin_pil = bottom_images_pil[1]    # Lowest score
-        img_minmin1_pil = bottom_images_pil[0]   # Second lowest score
+        img_maxmax_pil = top_images_pil[0]  # 纹理丰富度最高的块
+        img_minmin_pil = bottom_images_pil[0]  # 纹理丰富度最低的块
 
         # Convert to tensors
         img_minmin = self.to_tensor(img_minmin_pil)
         img_maxmax = self.to_tensor(img_maxmax_pil)
-        img_minmin1 = self.to_tensor(img_minmin1_pil)
-        img_maxmax1 = self.to_tensor(img_maxmax1_pil)
         
-        return img_minmin, img_maxmax, img_minmin1, img_maxmax1
+        return img_minmin, img_maxmax
