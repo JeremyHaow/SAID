@@ -20,7 +20,7 @@ eval_datasets=(
 )
 
 MODEL_NAME="AIDE"
-EXPERIMENT_TAG="ghe_score_patch_128"
+EXPERIMENT_TAG="ghe_score_patch_32"
 
 PY_ARGS=${@:1}
 
@@ -50,7 +50,7 @@ do
             --eval_data_path "$eval_dataset" \
             --batch_size 32 \
             --blr 1e-2 \
-            --epochs 20 \
+            --epochs 30 \
             --warmup_epochs 1 \
             --weight_decay 0.01 \
             --save_ckpt_freq 1 \

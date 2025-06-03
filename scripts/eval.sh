@@ -11,15 +11,15 @@ DISTRIBUTED_ARGS="
     --master_addr $MASTER_ADDR \
     --master_port $MASTER_PORT
 "
-RESUME_PATH="./results/AIDE_ghe_score_patch_128/train_ForenSynths/20250529_233604"
+RESUME_PATH="./results/AIDE_ghe_score_patch_32/train_ForenSynths/20250530_180125"
 
 eval_datasets=(
-    "/root/lanyun-tmp/datasets/AIGCDetectionBenchMark/test" \
-    "/root/lanyun-tmp/datasets/GenImage/test" \
-    "/root/lanyun-tmp/datasets/ForenSynths/test" \
-    "/root/lanyun-tmp/datasets/UniversalFakeDetect" \
-    "/root/lanyun-tmp/datasets/Self-Synthesis/test" \
-    "/root/lanyun-tmp/datasets/Chameleon/test"
+    # "/root/lanyun-tmp/datasets/AIGCDetectionBenchMark/test" \
+    # "/root/lanyun-tmp/datasets/GenImage/test" \
+    # "/root/lanyun-tmp/datasets/ForenSynths/test" \
+    "/root/lanyun-tmp/datasets/UniversalFakeDetect/test" \
+    # "/root/lanyun-tmp/datasets/Self-Synthesis/test" \
+    # "/root/lanyun-tmp/datasets/Chameleon/test"
 )
 
 for eval_dataset in "${eval_datasets[@]}"
